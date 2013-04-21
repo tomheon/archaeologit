@@ -1,0 +1,5 @@
+* Archaeologit
+
+Digs through the delicate layers of your git repositories.
+
+
