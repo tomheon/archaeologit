@@ -1,0 +1,6 @@
+commit 749f4870573918f7aa8420b6a782b0d736be37ac
+Author: Bob Jones <bob@example.com>
+Date:   Sat Apr 20 23:18:43 2013 -0400
+
+    Add first cut at class representing project in git.
+

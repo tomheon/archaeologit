@@ -12,8 +12,6 @@ to the right exe.
 
 from contextlib import contextmanager
 import os
-import shutil
-import tempfile
 
 from nose.tools import nottest
 
@@ -63,18 +61,27 @@ class TestRepo(object):
                     fil.write(contents)
                 self._git_cmd(["add", fname])
 
-        cmd = ["commit", "-m"]
-        if commit_msg is None:
-            commit_msg = "Test commit."
-        cmd.append(commit_msg)
+        cmd = ["commit"]
+
         if author is None:
             author = "Test Author <test@example.com>"
         cmd.append("--author")
         cmd.append(author)
-        self._git_cmd(cmd)
+
+        if commit_msg is None:
+            commit_msg = "Test commit."
+
+        with util.temp_fname() as commit_fname:
+            with open(commit_fname, 'wb') as fil:
+                fil.write(util.utf8(commit_msg))
+            cmd.append("-F")
+            cmd.append(commit_fname)
+
+            self._git_cmd(cmd)
 
     def _git_cmd(self, cmd):
-        git.git_cmd(cmd, cwd=self.repo_root)
+        with git.git_cmd(cmd, cwd=self.repo_root):
+            pass
 
     def _ensure_dir_for_fname(self, fname):
         util.mkdir_p(os.path.dirname(fname))
@@ -86,10 +93,50 @@ def mk_test_repo():
     """
     Create a temp directory and yield a TestRepo built from it.
 
-    After the yield returns, remove the temp dir.
+    The temp dir will be cleaned up afterwards.
     """
-    temp_dir = tempfile.mkdtemp()
-    try:
+    with util.mk_tmpdir() as temp_dir:
         yield TestRepo(temp_dir)
+
+
+# flag used in env_setting to indicate that an env variable is to be
+# removed
+REMOVE_FROM_ENV = object()
+
+
+@contextmanager
+def env_setting(key, value):
+    """
+    Yield with an ENV setting of key => value, replace it afterwards.
+    """
+    had_key = key in os.environ
+    orig_val = os.environ.get(key)
+    try:
+        if value is REMOVE_FROM_ENV:
+            if key in os.environ:
+                del os.environ[key]
+        else:
+            os.environ[key] = value
+        yield
     finally:
-        shutil.rmtree(temp_dir)
+        if not had_key:
+            if key in os.environ:
+                del os.environ[key]
+        else:
+            os.environ[key] = orig_val
+
+
+@nottest
+def read_test_fname(fname):
+    """
+    Assuming that fname is under "tests/testfiles", read and return
+    the contents.
+    """
+    with open(os.path.join(os.path.dirname(__file__),
+                           'tests',
+                           'testfiles',
+                           fname),
+              'rb') as fil:
+        return fil.read()
+
+

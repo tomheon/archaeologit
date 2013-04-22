@@ -8,8 +8,9 @@ set or is empty, they'll default to use "/usr/bin/env git" which
 should work fine on most systems.
 """
 
+from contextlib import contextmanager
 import os
-from subprocess import Popen, PIPE
+from subprocess import call
 
 from archaeologit import log, util
 
@@ -25,9 +26,27 @@ class GitExeException(Exception):
     pass
 
 
+def find_git_root(git_repo_or_subdir):
+    """
+    Returns a real, absolute path to the git root, assuming that
+    `git_repo_or_subdir` is a real, absolute path to either a git repo
+    or subdir under it.
+    """
+    cmd = 'rev-parse --show-toplevel'.split()
+    with git_cmd(cmd, cwd=git_repo_or_subdir) as out_f:
+        git_root = out_f.read().strip()
+    return util.real_abs_path(git_root)
+
+
+@contextmanager
 def git_cmd(cmd, cwd, git_exe=None):
     """
-    Run a git cmd and return what it printed to stdout.
+    Run a git cmd and yield an open temporary file to the output.
+
+    After the yield returns, the temporary file is removed.
+
+    The file is returned, rather than a string containing the output,
+    because the output of some of the commands we use is large.
 
     If the git cmd doesn't return 0, raise a GitExeException.
 
@@ -41,15 +60,28 @@ def git_cmd(cmd, cwd, git_exe=None):
     """
     git_exe = resolve_git_exe(git_exe)
     final_cmd = git_exe.split() + cmd
-    git_p = Popen(final_cmd, stdout=PIPE, stderr=PIPE, cwd=cwd)
-    (out, err) = git_p.communicate()
-    if git_p.returncode != 0:
-        git_cmd_s = _fmt_cmd_for_log(final_cmd)
-        log.error("Error running %s: %s" % (util.utf8(git_cmd_s), err))
-        raise GitExeException("Git command %s returned %d" %
-                              (git_cmd_s,
-                               git_p.returncode))
-    return out
+    # mk_tmpdir will clean up the entire directory recursively for us
+    with util.mk_tmpdir() as tmp_dir:
+        stdout_fname = os.path.join(tmp_dir, 'stdout')
+        stderr_fname = os.path.join(tmp_dir, 'stderr')
+        with open(stdout_fname, 'wb') as o_f, open(stderr_fname, 'wb') as e_f:
+            returncode = call(final_cmd, stdout=o_f, stderr=e_f, cwd=cwd)
+            if returncode != 0:
+                git_cmd_s = _fmt_cmd_for_log(final_cmd)
+                err_msg = '\n'.join([util.utf8(util.read_file(stderr_fname)),
+                                     util.utf8(util.read_file(stdout_fname))])
+                log.error("Error running %s: %s" % (util.utf8(git_cmd_s),
+                                                    err_msg))
+                raise GitExeException(
+                    "Git command %s returned %d with err log %s" %
+                    (git_cmd_s,
+                     returncode,
+                     err_msg))
+            else:
+                # re-open the stdout file so we don't get any wonky fp
+                # stuff
+                with open(stdout_fname, 'rb') as stdout_fil:
+                    yield stdout_fil
 
 
 def resolve_git_exe(git_exe):
@@ -77,4 +109,4 @@ def _fmt_cmd_for_log(cmd):
     it's relatively easy to see if there were whitespace issues or
     not.
     """
-    return ' '.join(['"%s"' % seg for seg in cmd])
+    return ' '.join(['"%s"' % util.utf8(seg) for seg in cmd])
