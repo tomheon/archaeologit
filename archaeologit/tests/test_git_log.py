@@ -1,7 +1,6 @@
 from collections import namedtuple
 import itertools
 import os
-import textwrap
 
 from nose.tools import ok_, eq_, raises
 

@@ -138,5 +138,3 @@ def read_test_fname(fname):
                            fname),
               'rb') as fil:
         return fil.read()
-
-
