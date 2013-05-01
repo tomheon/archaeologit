@@ -2,11 +2,12 @@ from collections import namedtuple
 import itertools
 import os
 
+from impermagit import fleeting_repo
 from nose.tools import ok_, eq_, raises
 
 from archaeologit.git import GitExeException
 from archaeologit import git_log
-from archaeologit.tutil import mk_test_repo, read_test_fname
+from archaeologit.tutil import read_test_fname
 from archaeologit import util
 
 
@@ -96,7 +97,7 @@ def test_various_git_log_funcs():
     for num_commits in range(1, 3):
         for commit_infos in itertools.permutations(TEST_COMMIT_INFOS,
                                                    num_commits):
-            with mk_test_repo() as test_repo:
+            with fleeting_repo() as test_repo:
                 for commit_info in commit_infos:
                     _commit_to_test_txt(test_repo, **commit_info._asdict())
                 test_txt = os.path.join(test_repo.repo_root, 'test.txt')
@@ -157,7 +158,7 @@ def test_raw_log_entries_barfs_on_non_git_path():
 
 @raises(GitExeException)
 def test_raw_log_entries_barfs_on_missing_file():
-    with mk_test_repo() as test_repo:
+    with fleeting_repo() as test_repo:
         test_fname = os.path.join(test_repo.repo_root,
                                   'notafile.txt')
         list(git_log.raw_log_entries(test_fname))

@@ -1,15 +1,15 @@
 import os
 
+from impermagit import fleeting_repo
 from nose.tools import eq_, raises
 
 from archaeologit.git import GitExeException
 from archaeologit import project
-from archaeologit.tutil import mk_test_repo
 from archaeologit import util
 
 
 def test_ls():
-    with mk_test_repo() as test_repo:
+    with fleeting_repo() as test_repo:
         test_repo.commit([('test_proj/test.txt', 'testing\n'),
                           ('test_proj/test2.txt', 'testing\n'),
                           ('test3.txt', 'testing\n')])

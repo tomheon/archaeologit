@@ -1,15 +1,16 @@
 import os
 
 from nose.tools import eq_, ok_, raises
+from impermagit import fleeting_repo
 
 from archaeologit.git import DEFAULT_GIT_EXE, resolve_git_exe, \
     ARCHAEOLOGIT_GIT_EXE_ENV_VAR, git_cmd, GitExeException, find_git_root
-from archaeologit.tutil import env_setting, REMOVE_FROM_ENV, mk_test_repo
+from archaeologit.tutil import env_setting, REMOVE_FROM_ENV
 from archaeologit import util
 
 
 def test_find_git_root():
-    with mk_test_repo() as test_repo:
+    with fleeting_repo() as test_repo:
         test_repo.commit([('test_proj/test.txt', 'testing\n')])
         git_root = test_repo.repo_root
         test_proj_root = os.path.join(git_root, 'test_proj')
@@ -59,7 +60,7 @@ def test_git_cmd_barfs_on_bad_cmd():
 
 
 def test_git_cmd_returns_std_out():
-    with mk_test_repo() as test_repo:
+    with fleeting_repo() as test_repo:
         commit_msg = 'I remain committed.'
         test_repo.commit([('test.txt', 'testing\n')],
                          commit_msg=commit_msg)
