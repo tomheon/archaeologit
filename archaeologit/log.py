@@ -3,27 +3,29 @@ Utilities for logging.
 """
 
 import logging
+import multiprocessing
 import sys
 
 FORMAT = "%(asctime)s %(message)s"
 
 # by default, log to stderr, as we get better results with
 # multiprocessing.
-logging.basicConfig(format=FORMAT,
-                    stream=sys.stderr)
+
+logger = multiprocessing.log_to_stderr()
+logger.setLevel(logging.INFO)
 
 
 def debug(*args, **kwargs):
-    logging.debug(*args, **kwargs)
+    logger.debug(*args, **kwargs)
 
 
 def info(*args, **kwargs):
-    logging.info(*args, **kwargs)
+    logger.info(*args, **kwargs)
 
 
 def warn(*args, **kwargs):
-    logging.warn(*args, **kwargs)
+    logger.warn(*args, **kwargs)
 
 
 def error(*args, **kwargs):
-    logging.error(*args, **kwargs)
+    logger.error(*args, **kwargs)

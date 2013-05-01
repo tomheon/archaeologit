@@ -3,6 +3,7 @@ Module to read / parse git logs.
 """
 
 from collections import namedtuple
+from contextlib import contextmanager
 import os
 import re
 
@@ -35,32 +36,11 @@ def parse_name_and_email(author):
         return (match.group(1), match.group(2))
 
 
-def log_entries(fname):
+@contextmanager
+def raw_log_stream(fname):
     """
-    Generator yielding a stream of LogEntry named tuples, one for each
-    git log entry for fname, in chronological order.
-
-    Note that, in the case that parse_log_entry cannot parse a
-    LogEntry from a raw log entry, it returns None, which is returned
-    from this function as well.
-
-    Assumes that `fname` is a real, absolute path somewhere in a git
-    checkout.
-    """
-    for raw_log_entry in raw_log_entries(fname):
-        yield parse_log_entry(raw_log_entry)
-
-
-def raw_log_entries(fname):
-    """
-    Generator yielding a stream of strings, each containing a raw git
-    log entry for fname, in chronological order.
-
-    Assumes that `fname` is a real, absolute path to a file somewhere
-    in a git checkout.
-
-    Note that, unlike parsed_log_entries, this returns the raw bytes
-    as delivered from git, without any conversion to unicode.
+    Yield an open file-like containing the NULL byte delimited raw log
+    entries for fname, which will be closed upon return.
     """
     git_root = git.find_git_root(os.path.dirname(fname))
     # -z = null byte separate log entries
@@ -84,11 +64,21 @@ def raw_log_entries(fname):
     # contain spaces.
     cmd.append(fname)
     with git.git_cmd(cmd, cwd=git_root) as raw_log_entries_z:
-        for raw_log_entry in util.split_file(raw_log_entries_z, '\0'):
-            yield raw_log_entry
+        yield raw_log_entries_z
 
 
-def parse_log_entry(raw_log_entry):
+def parse_raw_log(fname):
+    with raw_log_stream(fname) as stream:
+        for entry in parse_raw_log_stream(stream):
+            yield entry
+
+
+def parse_raw_log_stream(raw_log_stream):
+    for raw_log_entry in util.split_file(raw_log_stream, '\0'):
+        yield _parse_log_entry(raw_log_entry)
+
+
+def _parse_log_entry(raw_log_entry):
     """
     Parse a single git log entry into a LogEntry, or return None
     if it can't be parsed.

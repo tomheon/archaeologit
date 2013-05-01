@@ -1,8 +1,8 @@
 from StringIO import StringIO
 
-from nose.tools import eq_, raises
+from nose.tools import eq_, raises, ok_
 
-from archaeologit.util import split_file
+from archaeologit.util import split_file, rel_fname
 
 
 TEST_SPLIT_FILE_DATA = [("null\0byte", "\0"),
@@ -41,3 +41,29 @@ def test_split_file_barfs_on_empty_sep():
     stringio = StringIO("hi there")
     # call list to invoke the generator
     list(split_file(stringio, sep_char=""))
+
+
+REL_FNAME_TEST_DATA = [("", "", ""),
+                       ("/home/test/this",
+                        "/home/test/this",
+                        ""),
+                       ("/home/test/",
+                        "/home/test/this/thing.txt",
+                        "this/thing.txt"),
+                       ("/home/test/",
+                        "/home/test/thing.txt",
+                        "thing.txt")]
+
+
+def test_rel_fname_finds_relative_fname():
+    for (dirname, fname, expected_rel_fname) in REL_FNAME_TEST_DATA:
+        yield _check_rel_fname, dirname, fname, expected_rel_fname
+
+
+def _check_rel_fname(dirname, fname, expected_rel_fname):
+    eq_(expected_rel_fname, rel_fname(dirname, fname))
+
+
+@raises(ValueError)
+def test_rel_fname_barfs_on_non_rel_file():
+    rel_fname("/test/this", "/something/else.txt")

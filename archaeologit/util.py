@@ -1,5 +1,6 @@
 """
-Random utilities that didn't really fit in other places.
+Random utilities, largely file and string based, that didn't really
+fit in other places.
 """
 
 from contextlib import contextmanager
@@ -163,3 +164,33 @@ def temp_fname():
         except OSError:
             # this means it was already unlinked
             pass
+
+
+def rel_fname(dirname, fname):
+    """
+    Assuming `fname` is at some level under `dirname`, and that both
+    are real absolute paths, return `fname` as relative to `dirname`.
+
+    >>> rel_fname("/tmp/something/one", "/tmp/something/one/two/three.txt")
+    'two/three.txt'
+
+    >>> rel_fname("/tmp/something/one/", "/tmp/something/one/two/three.txt")
+    'two/three.txt'
+    """
+    if not fname.startswith(dirname):
+        raise ValueError("Can't take relative path for non-relative file"
+                         "%s %s" % (dirname, fname))
+    dirname_len = len(dirname)
+    if not dirname.endswith('/'):
+        dirname_len += 1
+    return fname[dirname_len:]
+
+
+def ensure_containing_dir_exists(fname):
+    """
+    Ensure that the containing directory for `fname` exists.
+
+    E.g. if fname is "/tmp/something/one/two.txt", recursively create
+    "/tmp", "/tmp/something", and "/tmp/something/one" if needed.
+    """
+    mkdir_p(os.path.dirname(fname))
