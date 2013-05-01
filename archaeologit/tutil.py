@@ -15,7 +15,6 @@ import os
 
 from nose.tools import nottest
 
-
 # flag used in env_setting to indicate that an env variable is to be
 # removed
 REMOVE_FROM_ENV = object()
