@@ -75,7 +75,9 @@ def parse_raw_log(fname):
 
 def parse_raw_log_stream(raw_log_stream):
     for raw_log_entry in util.split_file(raw_log_stream, '\0'):
-        yield _parse_log_entry(raw_log_entry)
+        log_entry = _parse_log_entry(raw_log_entry)
+        if log_entry is not None:
+            yield log_entry
 
 
 def _parse_log_entry(raw_log_entry):
@@ -101,23 +103,23 @@ def _parse_log_entry(raw_log_entry):
     diff = '\n'.join(diff_lines)
 
     if not diff.strip():
-        log.info("Diff appeared to be empty.")
+        log.debug("Diff appeared to be empty.")
         return None
 
     author = _parse_header('Author: ', header_lines)
     if not author:
-        log.info("Could not parse author.")
+        log.debug("Could not parse author.")
         return None
 
     parsed_author = parse_name_and_email(author)
     if not parsed_author:
-        log.info("Could not parse author name / email.")
+        log.debug("Could not parse author name / email.")
         return None
     author_name, author_email = parsed_author
 
     commit = _parse_header('commit ', header_lines)
     if not commit:
-        log.info("Could not parse commit.")
+        log.debug("Could not parse commit.")
         return None
 
     log_msg = '\n'.join(_parse_log_msg(header_lines))
@@ -186,13 +188,13 @@ def _split_entry_header(entry):
     # just in case of \r\n fun
     lines = [line.rstrip('\r') for line in lines]
     if not lines or len(lines) < 2:
-        log.info("Empty entry.")
+        log.debug("Empty entry.")
         return None
     if not lines[0].startswith("commit"):
-        log.info("No commit line.")
+        log.debug("No commit line.")
         return None
     if not lines[1].startswith("Author"):
-        log.info("No author line.")
+        log.debug("No author line.")
         return None
     # Start after the author line and look for the diff line.  This
     # should account for features like git notes.

@@ -1,6 +1,6 @@
 from StringIO import StringIO
 
-from nose.tools import eq_, raises, ok_
+from nose.tools import eq_, raises
 
 from archaeologit.util import split_file, rel_fname
 

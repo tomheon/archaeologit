@@ -4,7 +4,6 @@ Utilities for logging.
 
 import logging
 import multiprocessing
-import sys
 
 FORMAT = "%(asctime)s %(message)s"
 

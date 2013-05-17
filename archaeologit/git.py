@@ -10,20 +10,12 @@ should work fine on most systems.
 
 from contextlib import contextmanager
 import os
-from subprocess import call
 
-from archaeologit import log, util
+from archaeologit import util
 
 DEFAULT_GIT_EXE = '/usr/bin/env git'
 
 ARCHAEOLOGIT_GIT_EXE_ENV_VAR = 'ARCHAEOLOGIT_GIT_EXE'
-
-
-class GitExeException(Exception):
-    """
-    Thrown when the external git exe doesn't return a 0.
-    """
-    pass
 
 
 def find_git_root(git_repo_or_subdir):
@@ -48,7 +40,7 @@ def git_cmd(cmd, cwd, git_exe=None):
     The file is returned, rather than a string containing the output,
     because the output of some of the commands we use is large.
 
-    If the git cmd doesn't return 0, raise a GitExeException.
+    If the git cmd doesn't return 0, raise a WrappedPopenException.
 
     - `cmd`: a list of strings, as you would pass to subprocess.Popen.
 
@@ -60,28 +52,8 @@ def git_cmd(cmd, cwd, git_exe=None):
     """
     git_exe = resolve_git_exe(git_exe)
     final_cmd = git_exe.split() + cmd
-    # mk_tmpdir will clean up the entire directory recursively for us
-    with util.mk_tmpdir() as tmp_dir:
-        stdout_fname = os.path.join(tmp_dir, 'stdout')
-        stderr_fname = os.path.join(tmp_dir, 'stderr')
-        with open(stdout_fname, 'wb') as o_f, open(stderr_fname, 'wb') as e_f:
-            returncode = call(final_cmd, stdout=o_f, stderr=e_f, cwd=cwd)
-            if returncode != 0:
-                git_cmd_s = _fmt_cmd_for_log(final_cmd)
-                err_msg = '\n'.join([util.utf8(util.read_file(stderr_fname)),
-                                     util.utf8(util.read_file(stdout_fname))])
-                log.error("Error running %s: %s" % (util.utf8(git_cmd_s),
-                                                    err_msg))
-                raise GitExeException(
-                    "Git command %s returned %d with err log %s" %
-                    (git_cmd_s,
-                     returncode,
-                     err_msg))
-            else:
-                # re-open the stdout file so we don't get any wonky fp
-                # stuff
-                with open(stdout_fname, 'rb') as stdout_fil:
-                    yield stdout_fil
+    with util.wrap_popen(final_cmd, cwd=cwd) as stdout_fil:
+        yield stdout_fil
 
 
 def resolve_git_exe(git_exe):

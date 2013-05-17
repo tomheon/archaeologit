@@ -8,7 +8,15 @@ import errno
 import os
 import re
 import shutil
+from subprocess import call
 import tempfile
+
+
+class WrappedPopenException(Exception):
+    """
+    Raised when a wrapped subproc returns non 0.
+    """
+    pass
 
 
 def real_abs_path(fname, parent=None):
@@ -194,3 +202,59 @@ def ensure_containing_dir_exists(fname):
     "/tmp", "/tmp/something", and "/tmp/something/one" if needed.
     """
     mkdir_p(os.path.dirname(fname))
+
+
+def funcify(func_str):
+    """
+    - `func_str`: a string describing a fully qualified function
+      (e.g. 'one.two.func')
+
+    Returns the indicated function
+    """
+    mod, func = func_str.rsplit('.', 1)
+    f = getattr(__import__(mod, fromlist=[func]), func)
+    if not f:
+        raise Exception('Could not import %s' % func)
+    return f
+
+
+@contextmanager
+def wrap_popen(cmd, cwd=None, stdin_fil=None):
+    """
+    Wrap a call to popen in a contextmanager, yielding an open file
+    representing the subproc's stdout.
+
+    This uses temp files to do the interproc communication, avoiding
+    buffer issues that can cause deadlock when, say, both stdin and
+    stdout are moving around decent size chunks of data.
+
+    Raises a WrappedPopenException if the process returns non-0.
+    """
+    with mk_tmpdir() as tmp_dir:
+        stdout_fname = os.path.join(tmp_dir, 'stdout')
+        stderr_fname = os.path.join(tmp_dir, 'stderr')
+        with open(stdout_fname, 'wb') as o_f, open(stderr_fname, 'wb') as e_f:
+            returncode = call(cmd, stdin=stdin_fil, stdout=o_f, stderr=e_f,
+                              cwd=cwd)
+            if returncode != 0:
+                cmd_s = _fmt_cmd_for_log(cmd)
+                err_msg = '\n'.join([utf8(read_file(stderr_fname)),
+                                     utf8(read_file(stdout_fname))])
+                raise WrappedPopenException(
+                    "Command %s returned %d with err log %s" %
+                    (cmd_s,
+                     returncode,
+                     err_msg))
+            else:
+                # re-open the stdout file so we don't get any wonky fp
+                # stuff
+                with open(stdout_fname, 'rb') as stdout_fil:
+                    yield stdout_fil
+
+
+def _fmt_cmd_for_log(cmd):
+    """
+    Join the cmd, quoting individual segments first so that it's
+    relatively easy to see if there were whitespace issues or not.
+    """
+    return ' '.join(['"%s"' % utf8(seg) for seg in cmd])

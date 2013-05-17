@@ -3,9 +3,8 @@ import itertools
 import os
 
 from impermagit import fleeting_repo
-from nose.tools import ok_, eq_, raises
+from nose.tools import ok_, eq_
 
-from archaeologit.git import GitExeException
 from archaeologit import git_log
 from archaeologit.tutil import read_test_fname
 from archaeologit import util

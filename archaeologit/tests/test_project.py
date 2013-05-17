@@ -3,7 +3,6 @@ import os
 from impermagit import fleeting_repo
 from nose.tools import eq_, raises
 
-from archaeologit.git import GitExeException
 from archaeologit import project
 from archaeologit import util
 
@@ -28,7 +27,7 @@ def test_ls():
             project.ls(git_root))
 
 
-@raises(GitExeException)
+@raises(util.WrappedPopenException)
 def test_ls_barfs_on_non_git_repo():
     with util.mk_tmpdir() as temp_dir:
         project.ls(temp_dir)

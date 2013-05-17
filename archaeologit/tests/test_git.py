@@ -4,7 +4,7 @@ from nose.tools import eq_, ok_, raises
 from impermagit import fleeting_repo
 
 from archaeologit.git import DEFAULT_GIT_EXE, resolve_git_exe, \
-    ARCHAEOLOGIT_GIT_EXE_ENV_VAR, git_cmd, GitExeException, find_git_root
+    ARCHAEOLOGIT_GIT_EXE_ENV_VAR, git_cmd, find_git_root
 from archaeologit.tutil import env_setting, REMOVE_FROM_ENV
 from archaeologit import util
 
@@ -20,7 +20,7 @@ def test_find_git_root():
         eq_(git_root, find_git_root(git_root))
 
 
-@raises(GitExeException)
+@raises(util.WrappedPopenException)
 def test_find_git_root_barfs_on_non_repo():
     with util.mk_tmpdir() as temp_dir:
         find_git_root(temp_dir)
@@ -52,7 +52,7 @@ def test_can_call_git():
         ok_(out_f.read())
 
 
-@raises(GitExeException)
+@raises(util.WrappedPopenException)
 def test_git_cmd_barfs_on_bad_cmd():
     with git_cmd(["not_a_git_cmd"], cwd='.'):
         # should never get here
