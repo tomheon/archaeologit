@@ -137,8 +137,8 @@ def _extract_logs(pool, fnames_to_excavate, project_dir, log_cache_dir,
         log_z_fname = os.path.join(log_cache_dir, rel_name)
         rel_and_log_z_fnames.append((rel_name, log_z_fname))
         if _should_get_log(log_z_fname, use_cached_logs):
-            log_async_results.add(pool.apply_async(_extract_log,
-                                                   (fname, project_dir)))
+            log_async_results.append(pool.apply_async(_extract_log,
+                                                      (fname, project_dir)))
 
     for res in log_async_results:
         (rel_name, tmp_file) = res.get(REALLY_LONG_TIME)
